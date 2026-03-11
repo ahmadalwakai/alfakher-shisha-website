@@ -4,14 +4,23 @@ import { neon } from "@neondatabase/serverless";
 const getDatabaseUrl = () => {
   const url = process.env.DATABASE_URL;
   if (!url) {
-    throw new Error("DATABASE_URL environment variable is not set");
+    return null;
   }
   return url;
 };
 
+// Check if database is available
+export const isDatabaseConfigured = () => {
+  return !!getDatabaseUrl();
+};
+
 // Get SQL connection
 export const getDb = () => {
-  return neon(getDatabaseUrl());
+  const url = getDatabaseUrl();
+  if (!url) {
+    throw new Error("DATABASE_URL environment variable is not set");
+  }
+  return neon(url);
 };
 
 // Contact submission interface
@@ -87,6 +96,10 @@ export async function initProductsTable(): Promise<void> {
 
 // Get all products
 export async function getProducts(): Promise<Product[]> {
+  if (!isDatabaseConfigured()) {
+    // Return empty array during build if DATABASE_URL is not set
+    return [];
+  }
   const sql = getDb();
   await initProductsTable();
   const result = await sql`
